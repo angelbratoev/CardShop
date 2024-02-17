@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections;
 using System.Security.Claims;
+using System.Xml.Linq;
 
 namespace CardShop.Controllers
 {
@@ -93,6 +94,97 @@ namespace CardShop.Controllers
             {
                 return BadRequest();
             }
+
+            return View(model);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Edit(int id)
+        {
+
+            var model = await data.Cards
+                .AsNoTracking()
+                .Where(c => c.Id == id)
+                .Select(c => new CardFormViewModel()
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    Description = c.Description,
+                    OwnerId = c.OwnerId,
+                    Price = c.Price,
+                    ImageUrl = c.ImageUrl,
+                    GameId = c.GameId
+                })
+                .FirstOrDefaultAsync();
+
+            if (model == null)
+            {
+                return BadRequest();
+            }
+
+            if (model.OwnerId != GetUserId())
+            {
+                return Unauthorized();
+            }
+
+            model.Games = await GetGamesAsync();
+
+            return View(model);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Edit(CardFormViewModel model, int id)
+        {
+            Card card = await data.Cards
+                .FindAsync(id);
+
+            if (card == null)
+            {
+                return BadRequest();
+            }
+
+            if (GetUserId() != card.OwnerId)
+            {
+                return Unauthorized();
+            }
+
+            card.Name = model.Name;
+            card.Description = model.Description;
+            card.OwnerId = GetUserId();
+            card.Price = model.Price;
+            card.ImageUrl = model.ImageUrl;
+            card.GameId = model.GameId;
+
+            await data.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> AddToCart(int id)
+        {
+            string userId = GetUserId();
+
+            var model = await data.Cards
+                .Where(c => c.Id == id)
+                .Include(c => c.CardsBuyers)
+                .FirstOrDefaultAsync();
+
+            if (model == null)
+            {
+                return BadRequest();
+            }
+
+            if (!model.CardsBuyers.Any(cb => cb.BuyerId == userId))
+            {
+                model.CardsBuyers.Add(new CardBuyer()
+                {
+                    BuyerId = userId,
+                    CardId = id
+                });
+            }
+
+            await data.SaveChangesAsync();
 
             return View(model);
         }

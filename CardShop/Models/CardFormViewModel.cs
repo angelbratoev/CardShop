@@ -7,6 +7,9 @@ namespace CardShop.Models
 {
     public class CardFormViewModel
     {
+        [Required]
+        public int Id { get; set; }
+
         [Required(ErrorMessage = RequiredField)]
         [StringLength(CardNameMaxLength,
             MinimumLength = CardNameMinLength,
@@ -18,6 +21,9 @@ namespace CardShop.Models
             MinimumLength = CardDescriptionMinLength,
             ErrorMessage = IncorrectLength)]
         public string Description { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = RequiredField)]
+        public string OwnerId { get; set; } = string.Empty;
 
         public string ImageUrl { get; set; } = string.Empty;
 
